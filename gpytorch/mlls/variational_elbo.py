@@ -58,12 +58,13 @@ class VariationalELBO(_ApproximateMarginalLogLikelihood):
     """
 
     def _log_likelihood_term(self, variational_dist_f, target, **kwargs):
-
+        
         if 'weights' in kwargs: 
+            # calculate a posterior-weighted log LL, rescaled by the sum of state posteriors
             weights = kwargs.pop('weights')
             logLL   = self.likelihood.expected_log_prob(target, variational_dist_f, **kwargs)
 
-            return (logLL * weights).sum(-1)
+            return (logLL * weights).sum(-1) * 1/weights.mean()
 
         else:
             logLL = self.likelihood.expected_log_prob(target, variational_dist_f, **kwargs)
