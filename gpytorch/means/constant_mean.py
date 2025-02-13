@@ -76,11 +76,14 @@ class ConstantMean(Mean):
         self._register_load_state_dict_pre_hook(_ensure_updated_strategy_flag_set)
 
         self.batch_shape = batch_shape
+
         self.register_parameter(name="raw_constant", parameter=torch.nn.Parameter(torch.zeros(batch_shape)))
+
         if constant_prior is not None:
             self.register_prior("mean_prior", constant_prior, self._constant_param, self._constant_closure)
         if constant_constraint is not None:
             self.register_constraint("raw_constant", constant_constraint)
+
 
     @property
     def constant(self):
