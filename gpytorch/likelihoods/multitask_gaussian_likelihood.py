@@ -116,15 +116,24 @@ class _MultitaskGaussianLikelihoodBase(_GaussianLikelihoodBase):
     def _shaped_noise_covar(
         self, shape: torch.Size, add_noise: Optional[bool] = True, interleaved: bool = True, *params: Any, **kwargs: Any
     ) -> LinearOperator:
+
         if not self.has_task_noise:
             noise = ConstantDiagLinearOperator(self.noise, diag_shape=shape[-2] * self.num_tasks)
             return noise
 
         if self.rank == 0:
-            task_noises = self.raw_task_noises_constraint.transform(self.raw_task_noises)
+            
+            # if multitask LL contains both multiple outputs and multiple states, index states
+            if 'state_idx' in kwargs:
+                state_idx = kwargs.pop('state_idx')
+                task_noises = self.raw_task_noises_constraint.transform(self.raw_task_noises[state_idx])
+            else:
+                task_noises = self.raw_task_noises_constraint.transform(self.raw_task_noises)
+
             task_var_lt = DiagLinearOperator(task_noises)
             dtype, device = task_noises.dtype, task_noises.device
             ckl_init = KroneckerProductDiagLinearOperator
+
         else:
             task_noise_covar_factor = self.task_noise_covar_factor
             task_var_lt = RootLinearOperator(task_noise_covar_factor)

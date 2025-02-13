@@ -5,6 +5,7 @@ from copy import deepcopy
 from typing import Any, Optional, Tuple, Union
 
 import torch
+from linear_operator import to_dense, to_linear_operator
 from linear_operator.operators import LinearOperator, MaskedLinearOperator, ZeroLinearOperator
 from torch import Tensor
 from torch.distributions import Distribution, Normal
@@ -40,6 +41,7 @@ class _GaussianLikelihoodBase(Likelihood):
 
     def expected_log_prob(self, target: Tensor, input: MultivariateNormal, *params: Any, **kwargs: Any) -> Tensor:
 
+        # calls multitask_gaussian_likelihood._shaped_noise_covar
         noise = self._shaped_noise_covar(input.mean.shape, *params, **kwargs).diagonal(dim1=-1, dim2=-2)
         # Potentially reshape the noise to deal with the multitask case
         noise = noise.view(*noise.shape[:-1], *input.event_shape)
@@ -60,10 +62,16 @@ class _GaussianLikelihoodBase(Likelihood):
             missing = torch.isnan(target)
             target = settings.observation_nan_policy._fill_tensor(target)
 
-        mean, variance = input.mean, input.variance
+        if 'variance' in kwargs:
+            variance = kwargs.pop('variance')
+        else:
+            variance = input.variance
+
+        mean = input.mean
+
         res = ((target - mean).square() + variance) / noise + noise.log() + math.log(2 * math.pi)
         res = res.mul(-0.5)
-
+        
         if nan_policy == "fill":
             res = res * ~missing
 
