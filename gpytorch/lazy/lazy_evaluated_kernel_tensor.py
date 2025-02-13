@@ -45,6 +45,7 @@ class LazyEvaluatedKernelTensor(LinearOperator):
         self.x1 = x1
         self.x2 = x2
         self.last_dim_is_batch = last_dim_is_batch
+        self.active_dims = kernel.active_dims
         self.params = params
         self._is_grad_enabled = torch.is_grad_enabled()  # records grad state at instantiation
 
@@ -211,6 +212,11 @@ class LazyEvaluatedKernelTensor(LinearOperator):
             x1 = x1.expand(*batch_shape, *x1.shape[-2:])
             x1 = x1[(*batch_indices, row_index, dim_index)]
 
+            # this is new
+            if self.active_dims is not None and self.active_dims.dim()==2:
+                active_dims = self.active_dims
+                x1 = torch.stack([x[:,active_dims[xi]] for xi,x in enumerate(x1)])
+
         # Call x2[*batch_indices, col_index, :]
         try:
             x2 = x2[(*batch_indices, col_index, dim_index)]
@@ -220,6 +226,11 @@ class LazyEvaluatedKernelTensor(LinearOperator):
         except IndexError:
             x2 = x2.expand(*batch_shape, *x2.shape[-2:])
             x2 = x2[(*batch_indices, col_index, dim_index)]
+            
+            if self.active_dims is not None and self.active_dims.dim()==2:
+                active_dims = self.active_dims
+                x2 = torch.stack([x[:,active_dims[xi]] for xi,x in enumerate(x2)])
+
 
         if len(batch_indices) == 0 or all(ind == slice(None, None, None) for ind in batch_indices):
             new_kernel = self.kernel  # Avoid unnecessary copying when we aren't explicitly indexing batch dims
