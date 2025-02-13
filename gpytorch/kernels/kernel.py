@@ -216,9 +216,9 @@ class Kernel(Module):
         # Used by the lengthscale_prior
         return m.lengthscale
 
-    def _lengthscale_closure(self, m: Kernel, v: Tensor) -> None:
+    def _lengthscale_closure(self, m: Kernel, v: Tensor) -> Tensor:
         # Used by the lengthscale_prior
-        m._set_lengthscale(v)
+        return m._set_lengthscale(v)
 
     def _set_lengthscale(self, value: Tensor):
         # Used by the lengthscale_prior
@@ -236,7 +236,7 @@ class Kernel(Module):
     ) -> Union[Tensor, LinearOperator]:
         r"""
         Computes the covariance between :math:`\mathbf x_1` and :math:`\mathbf x_2`.
-        This method should be implemented by all Kernel subclasses.
+        This method should be imlemented by all Kernel subclasses.
 
         :param x1: First set of data (... x N x D).
         :param x2: Second set of data (... x M x D).
@@ -485,25 +485,27 @@ class Kernel(Module):
             * `diag`: `... x N`
             * `diag` with `last_dim_is_batch=True`: `... x K x N`
         """
-        if last_dim_is_batch:
-            warnings.warn(
-                "The last_dim_is_batch argument is deprecated, and will be removed in GPyTorch 2.0. "
-                "If you are using it as part of AdditiveStructureKernel or ProductStructureKernel, "
-                'please update your code according to the "Kernels with Additive or Product Structure" '
-                "tutorial in the GPyTorch docs.",
-                DeprecationWarning,
-            )
 
         x1_, x2_ = x1, x2
 
         # Select the active dimensions
-        if self.active_dims is not None:
+        if self.active_dims is not None and self.active_dims.dim()==1:
             x1_ = x1_.index_select(-1, self.active_dims)
             if x2_ is not None:
                 x2_ = x2_.index_select(-1, self.active_dims)
+        
+        ##### NEW #####
+        # elif self.active_dims is not None and self.active_dims.dim()==2:
+        #     x1_list = []; x2_list = []
+        #     for dims in self.active_dims:
+        #         x1_list.append(x1_.index_select(-1, dims))
+        #         if x2_ is not None:
+        #             x2_list.append(x2_.index_select(-1, dims))
+        ##### NEW #####
 
         # Give x1_ and x2_ a last dimension, if necessary
         if x1_.ndimension() == 1:
+            print('attention of using list of active dims, x1_dimension might be faulty')
             x1_ = x1_.unsqueeze(1)
         if x2_ is not None:
             if x2_.ndimension() == 1:
@@ -523,7 +525,11 @@ class Kernel(Module):
                 )
 
         if diag:
-            res = super(Kernel, self).__call__(x1_, x2_, diag=True, last_dim_is_batch=last_dim_is_batch, **params)
+            # print('attention if using list of active dims, diag option not implemented')
+            res = super(Kernel, self).__call__(x1_, x2_, 
+                                               diag=True, 
+                                               last_dim_is_batch=last_dim_is_batch, 
+                                               **params)
             # Did this Kernel eat the diag option?
             # If it does not return a LazyEvaluatedKernelTensor, we can call diag on the output
             if not isinstance(res, LazyEvaluatedKernelTensor):
@@ -532,12 +538,20 @@ class Kernel(Module):
             return res
 
         else:
+
+            # comment
             if settings.lazily_evaluate_kernels.on():
-                res = LazyEvaluatedKernelTensor(x1_, x2_, kernel=self, last_dim_is_batch=last_dim_is_batch, **params)
+                res = LazyEvaluatedKernelTensor(x1_, x2_, 
+                                                kernel=self, 
+                                                last_dim_is_batch=last_dim_is_batch, 
+                                                **params)
             else:
                 res = to_linear_operator(
-                    super(Kernel, self).__call__(x1_, x2_, last_dim_is_batch=last_dim_is_batch, **params)
+                    super(Kernel, self).__call__(x1_, x2_, 
+                                                 last_dim_is_batch=last_dim_is_batch, 
+                                                 **params)
                 )
+
             return res
 
     def __getstate__(self):
