@@ -244,4 +244,5 @@ class BatchDecoupledVariationalStrategy(VariationalStrategy):
         covar_dist = MultivariateNormal(
             torch.zeros_like(variational_dist.mean), variational_dist.lazy_covariance_matrix
         )
+
         return kl_divergence(mean_dist, prior_dist) + kl_divergence(covar_dist, prior_dist)

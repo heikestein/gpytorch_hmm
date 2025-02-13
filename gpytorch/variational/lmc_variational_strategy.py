@@ -135,6 +135,7 @@ class LMCVariationalStrategy(_VariationalStrategy):
         self.batch_shape = torch.Size(self.batch_shape)
 
         # LCM coefficients
+        # insert here the coefficients from GPs to outputs and make them untrainable
         lmc_coefficients = torch.randn(*batch_shape, self.num_tasks)
         self.register_parameter("lmc_coefficients", torch.nn.Parameter(lmc_coefficients))
 
@@ -157,8 +158,29 @@ class LMCVariationalStrategy(_VariationalStrategy):
     def variational_params_initialized(self) -> bool:
         return self.base_variational_strategy.variational_params_initialized
 
-    def kl_divergence(self) -> Tensor:
-        return super().kl_divergence().sum(dim=self.latent_dim)
+    def kl_divergence(self, **kwargs) -> Tensor:
+
+        KL = super().kl_divergence()
+
+        # return KL.sum(dim=self.latent_dim)
+        if 'weights' in kwargs and 'state_mat' in kwargs:
+            
+            # get state posteriors
+            weights = kwargs.pop('weights')
+            state_coef = weights.sum(axis=-1)/weights.size(-1) 
+
+            # get matrix that maps latents onto states
+            state_mat = kwargs.pop('state_mat')
+
+            # sum over state_specific latents and over number of states, div by number of data points and number of states
+            KL_sum = torch.tensor([KL[s>0].sum()*state_coef[si] 
+                                   for si,s in enumerate(state_mat)]).sum()/4 *self.latent_dim
+
+            # return KL, divided by number of states
+            return KL_sum
+
+        else:
+            return KL.sum(dim=self.latent_dim)
 
     def __call__(
         self, x: Tensor, prior: bool = False, task_indices: Optional[LongTensor] = None, **kwargs
@@ -195,6 +217,7 @@ class LMCVariationalStrategy(_VariationalStrategy):
             or ~gpytorch.distributions.MultivariateNormal (... x N)
         """
         latent_dist = self.base_variational_strategy(x, prior=prior, **kwargs)
+
         num_batch = len(latent_dist.batch_shape)
         latent_dim = num_batch + self.latent_dim
 

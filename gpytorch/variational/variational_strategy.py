@@ -187,20 +187,24 @@ class VariationalStrategy(_VariationalStrategy):
     ) -> MultivariateNormal:
         # Compute full prior distribution
         full_inputs = torch.cat([inducing_points, x], dim=-2)
+
         full_output = self.model.forward(full_inputs, **kwargs)
         full_covar = full_output.lazy_covariance_matrix
 
         # Covariance terms
         num_induc = inducing_points.size(-2)
-        test_mean = full_output.mean[..., num_induc:]
+        test_mean = full_output.mean[..., num_induc:]        
         induc_induc_covar = full_covar[..., :num_induc, :num_induc].add_jitter(self.jitter_val)
+        
         induc_data_covar = full_covar[..., :num_induc, num_induc:].to_dense()
         data_data_covar = full_covar[..., num_induc:, num_induc:]
 
         # Compute interpolation terms
         # K_ZZ^{-1/2} K_ZX
         # K_ZZ^{-1/2} \mu_Z
+
         L = self._cholesky_factor(induc_induc_covar)
+
         if L.shape != induc_induc_covar.shape:
             # Aggressive caching can cause nasty shape incompatibilies when evaluating with different batch shapes
             # TODO: Use a hook fo this
