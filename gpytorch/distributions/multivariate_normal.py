@@ -405,7 +405,7 @@ def kl_mvn_mvn(p_dist: MultivariateNormal, q_dist: MultivariateNormal) -> Tensor
     q_covar = q_dist.lazy_covariance_matrix
 
     p_mean = p_dist.loc
-    p_covar = p_dist.lazy_covariance_matrix
+    p_covar = p_dist.lazy_covariance_matrix.add_jitter(jitter_val=.00001)
     root_p_covar = p_covar.root_decomposition().root.to_dense()
 
     mean_diffs = p_mean - q_mean
