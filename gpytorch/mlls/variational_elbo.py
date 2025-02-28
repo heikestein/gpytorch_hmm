@@ -74,6 +74,7 @@ class VariationalELBO(_ApproximateMarginalLogLikelihood):
             for s in range(n_states):
 
                 state_idx = torch.arange(s*target.size(-1),s*target.size(-1)+target.size(-1))
+                # state_idx = torch.tensor([s])
 
                 # pass on for noise covar
                 kwargs['state_idx'] = state_idx
@@ -83,9 +84,9 @@ class VariationalELBO(_ApproximateMarginalLogLikelihood):
                 # pass on variance so it doesn't have to be extracted again, since __getitem__ makes
                 # covar a SumLinearOperator instead of AddedDiagLinearOperator:
                 kwargs['variance'] = variance[..., state_idx]
-    
+
                 loglikes = self.likelihood.expected_log_prob(target, state_dist, **kwargs)
-                
+
                 state_term = (weights[s]*loglikes).sum()
                 
                 logLL += state_term
