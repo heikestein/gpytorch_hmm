@@ -101,7 +101,8 @@ class VariationalStrategy(_VariationalStrategy):
 
     @cached(name="cholesky_factor", ignore_args=True)
     def _cholesky_factor(self, induc_induc_covar: LinearOperator) -> TriangularLinearOperator:
-        L = psd_safe_cholesky(to_dense(induc_induc_covar).type(_linalg_dtype_cholesky.value()))
+        L = psd_safe_cholesky(to_dense(induc_induc_covar).type(_linalg_dtype_cholesky.value()), 
+                              jitter=self.jitter_val)
         return TriangularLinearOperator(L)
 
     @property

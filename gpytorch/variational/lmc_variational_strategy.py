@@ -143,6 +143,7 @@ class LMCVariationalStrategy(_VariationalStrategy):
             self.jitter_val = settings.variational_cholesky_jitter.value(
                 self.base_variational_strategy.inducing_points.dtype
             )
+
         else:
             self.jitter_val = jitter_val
 
@@ -160,7 +161,7 @@ class LMCVariationalStrategy(_VariationalStrategy):
 
     def kl_divergence(self, **kwargs) -> Tensor:
 
-        KL = super().kl_divergence()
+        kl = super().kl_divergence()
 
         # return KL.sum(dim=self.latent_dim)
         if 'weights' in kwargs and 'state_mat' in kwargs:
@@ -173,14 +174,14 @@ class LMCVariationalStrategy(_VariationalStrategy):
             state_mat = kwargs.pop('state_mat')
 
             # sum over state_specific latents and over number of states, div by number of data points and number of states
-            KL_sum = torch.tensor([KL[s>0].sum()*state_coef[si] 
+            kl_sum = torch.tensor([kl[s>0].sum()*state_coef[si] 
                                    for si,s in enumerate(state_mat)]).sum()/4 *self.latent_dim
 
             # return KL, divided by number of states
-            return KL_sum
+            return kl_sum
 
         else:
-            return KL.sum(dim=self.latent_dim)
+            return kl.sum(dim=self.latent_dim)
 
     def __call__(
         self, x: Tensor, prior: bool = False, task_indices: Optional[LongTensor] = None, **kwargs
