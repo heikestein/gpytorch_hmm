@@ -41,7 +41,7 @@ class SoftmaxLikelihood(Likelihood):
         if num_classes is None:
             raise ValueError("num_classes is required")
         self.num_classes = num_classes
-        if mixing_weights:
+        if mixing_weights is not None:
             if num_features is None:
                 raise ValueError("num_features is required with mixing weights")
             self.num_features: int = num_features

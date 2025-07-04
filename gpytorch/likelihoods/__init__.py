@@ -16,6 +16,8 @@ from .multitask_gaussian_likelihood import _MultitaskGaussianLikelihoodBase, Mul
 from .noise_models import HeteroskedasticNoise
 from .softmax_likelihood import SoftmaxLikelihood
 from .student_t_likelihood import StudentTLikelihood
+from .poisson_likelihood import PoissonLikelihood
+from .gaussian_likelihood2 import GaussianLikelihood2
 
 __all__ = [
     "_GaussianLikelihoodBase",
@@ -34,4 +36,6 @@ __all__ = [
     "MultitaskGaussianLikelihood",
     "SoftmaxLikelihood",
     "StudentTLikelihood",
+    "PoissonLikelihood",
+    "GaussianLikelihood2",
 ]
