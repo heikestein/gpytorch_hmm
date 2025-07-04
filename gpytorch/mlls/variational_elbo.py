@@ -60,10 +60,15 @@ class VariationalELBO(_ApproximateMarginalLogLikelihood):
     def _log_likelihood_term(self, variational_dist_f, target, **kwargs):
 
         if 'weights' in kwargs and variational_dist_f.mean.size() != target.size():
-
             # print('weighted log posterior')
             # calculate a posterior-weighted log LL, rescaled by the sum of state posteriors
-            n_states = int(variational_dist_f.mean.size(1)/target.size(-1))
+            if 'n_states' in kwargs:
+                n_states = kwargs.pop('n_states')
+                n_dim = int(variational_dist_f.mean.size(1)/n_states)
+
+            else:
+                n_states = int(variational_dist_f.mean.size(1)/target.size(-1))
+                n_dim = target.size(-1)
 
             weights = kwargs.pop('weights') # n_states x n_datapoints
             variance = variational_dist_f.variance
@@ -73,14 +78,13 @@ class VariationalELBO(_ApproximateMarginalLogLikelihood):
             # calculate state-specific logLL by creating MultitaskMVNormal with 10 state-specific tasks
             for s in range(n_states):
 
-                state_idx = torch.arange(s*target.size(-1),s*target.size(-1)+target.size(-1))
+                state_idx = torch.arange(s*n_dim,s*n_dim+n_dim)
                 # state_idx = torch.tensor([s])
 
                 # pass on for noise covar
                 kwargs['state_idx'] = state_idx
 
                 state_dist = variational_dist_f.__getitem__((..., state_idx))
-
                 # pass on variance so it doesn't have to be extracted again, since __getitem__ makes
                 # covar a SumLinearOperator instead of AddedDiagLinearOperator:
                 kwargs['variance'] = variance[..., state_idx]
@@ -95,9 +99,6 @@ class VariationalELBO(_ApproximateMarginalLogLikelihood):
 
 
         elif 'weights' in kwargs and target.dim()==1: 
-
-            # print('one-dim')
-
             # calculate a posterior-weighted log LL, rescaled by the sum of state posteriors
             weights = kwargs.pop('weights')
             logLL   = self.likelihood.expected_log_prob(target, variational_dist_f, **kwargs)
@@ -105,8 +106,6 @@ class VariationalELBO(_ApproximateMarginalLogLikelihood):
             return (logLL * weights).sum(-1) * 1/weights.mean()
 
         else:
-
-            # print('not weighted')
             logLL = self.likelihood.expected_log_prob(target, variational_dist_f, **kwargs)
 
             return logLL.sum(-1)

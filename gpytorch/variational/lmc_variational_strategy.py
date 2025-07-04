@@ -135,7 +135,6 @@ class LMCVariationalStrategy(_VariationalStrategy):
         self.batch_shape = torch.Size(self.batch_shape)
 
         # LCM coefficients
-        # insert here the coefficients from GPs to outputs and make them untrainable
         lmc_coefficients = torch.randn(*batch_shape, self.num_tasks)
         self.register_parameter("lmc_coefficients", torch.nn.Parameter(lmc_coefficients))
 
